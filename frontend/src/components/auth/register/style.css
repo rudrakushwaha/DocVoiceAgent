@@ -1,0 +1,39 @@
+/* Register page CSS matching login aesthetic */
+:root{
+  --accent: #4f46e5;
+  --accent-dark: #3730a3;
+  --muted: #6b7280;
+}
+
+.register-page{
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:48px 16px; background: linear-gradient(135deg,#f3f4ff 0%, #fff 100%); font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+}
+
+.register-card{
+  width:100%; max-width:720px; border-radius:20px; padding:32px; background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.92)); box-shadow: 0 12px 40px rgba(16,24,40,0.08); border:1px solid rgba(15,23,42,0.04);
+}
+
+.register-grid{ display:grid; grid-template-columns:1fr; gap:20px }
+@media(min-width:900px){ .register-grid{ grid-template-columns: 1fr 320px } }
+
+.register-left{ padding:8px 4px }
+.register-right{ padding:16px; background: linear-gradient(180deg, rgba(79,70,229,0.95), rgba(124,58,237,0.88)); color:white; border-radius:12px; display:flex; flex-direction:column; gap:12px }
+
+.huge-title{ font-size:26px; font-weight:800; color:#0f172a }
+.muted{ color:var(--muted); font-size:14px }
+
+.form-field{ margin-top:14px }
+.form-field label{ display:block; font-weight:600; color:#374151; margin-bottom:8px }
+.input{ width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(15,23,42,0.06); background:white; box-shadow: 0 6px 14px rgba(2,6,23,0.04); }
+.input:focus{ outline:none; box-shadow: 0 10px 30px rgba(79,70,229,0.12); border-color: rgba(79,70,229,0.9); }
+
+.btn-primary{ width:100%; padding:12px; border-radius:10px; background: linear-gradient(90deg,var(--accent),var(--accent-dark)); color:white; font-weight:700; border:none; cursor:pointer }
+.btn-primary[disabled]{ opacity:0.8; cursor:not-allowed }
+
+.note{ font-size:13px; color:var(--muted); text-align:center }
+
+.register-right h3{ margin:0; font-size:18px; font-weight:800 }
+.register-right p{ margin:0; opacity:0.95 }
+.register-right ul{ margin:0; padding-left:16px }
+.register-right li{ list-style:none; margin-bottom:10px; display:flex; gap:10px; align-items:center }
+.register-right .dot{ width:8px; height:8px; border-radius:999px; background:white; opacity:0.9 }
