@@ -1,0 +1,109 @@
+# Dependencies
+node_modules/
+venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# FAISS indexes and ML data
+python_ml_service/indexes/
+*.faiss
+*.npy
+vectors.npy
+
+# Firebase
+firebase-adminsdk-*.json
+serviceAccountKey.json
+
+# Python cache
+*.py[cod]
+*$py.class
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+
+python_ml_service/.env/
+python_ml_service/.venv/
+python_ml_service/venv/
+python_ml_service/__pycache__/
+python_ml_service/*.pyc
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+
+# Env
+**/.env
+**/*.env
+
+# Node
+**/node_modules/
+
+# Build
+**/dist/
+**/build/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+.parcel-cache/
+
+# Package manager locks (optional - uncomment if needed)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+.eslintcache
+.vercel
+*.seed
+*.pid
+*.pid.lock

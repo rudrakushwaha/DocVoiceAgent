@@ -6,7 +6,10 @@ import Header from "./components/header";
 import Home from "./components/home";
 
 import { AuthProvider } from "./contexts/authContext";
+import { ThemeProvider } from './contexts/ThemeContext';
+
 import { useRoutes, useLocation } from "react-router-dom";
+import './styles/theme.css';
 
 function App() {
   const routesArray = [
@@ -32,8 +35,10 @@ function App() {
   const showHeader = location.pathname === '/' || location.pathname.startsWith('/login') || location.pathname.startsWith('/register');
   return (
     <AuthProvider>
-      {showHeader && <Header />}
-      <div className="app-content">{routesElement}</div>
+      <ThemeProvider>
+        {showHeader && <Header />}
+        <div className="app-content">{routesElement}</div>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

@@ -1,0 +1,161 @@
+/* Premium AI Theme: ChatGPT/Copilot inspired */
+body {
+  --bg-main: #f9fafb;
+  --bg-card: #ffffff;
+  --bg-panel: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --border: #e5e7eb;
+  --accent: #3b82f6;
+  --bubble-user: #f3f4f6;
+  --bubble-ai: #f1f5f9;
+  --shadow: 0 2px 12px 0 rgba(16,21,40,0.06);
+  background: var(--bg-main);
+  color: var(--text-primary);
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+body.dark {
+  --bg-main: #343541;
+  --bg-card: #393a41;
+  --bg-panel: #393a41;
+  --text-primary: #ececf1;
+  --text-secondary: #a1a1aa;
+  --border: #565869;
+  --accent: #10a37f;
+  --bubble-user: #393a41;
+  --bubble-ai: #444654;
+  --shadow: 0 2px 16px 0 rgba(52,53,65,0.18);
+  background: var(--bg-main);
+  color: var(--text-primary);
+}
+
+/* Card styles */
+.card {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+}
+
+/* TopBar */
+.topbar {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 8px 0 rgba(52,53,65,0.10);
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+}
+
+/* ChatWindow */
+.chat-window {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+}
+
+/* Chat bubbles */
+.bubble {
+  background: var(--bubble-ai);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px 0 rgba(52,53,65,0.10);
+  border: 1px solid var(--border);
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+}
+.bubble.user {
+  background: var(--bubble-user);
+  color: var(--text-primary);
+  border: 1px solid var(--accent);
+  box-shadow: 0 2px 12px 0 rgba(16,163,127,0.18);
+}
+.bubble:focus, .bubble.user:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 12px 0 rgba(59,130,246,0.10);
+}
+
+/* MessageInput */
+.message-input {
+  background: var(--bubble-user);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px 0 rgba(52,53,65,0.10);
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+}
+.message-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 12px 0 rgba(59,130,246,0.18);
+}
+
+/* Buttons */
+.button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px 0 rgba(59,130,246,0.10);
+  transition: background-color 250ms ease, color 250ms ease, box-shadow 250ms ease;
+}
+.button:hover, .button:focus {
+  background: #2563eb;
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 12px 0 rgba(59,130,246,0.18);
+}
+
+/* DocumentPanel */
+.document-panel {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-right: 1px solid var(--border);
+  box-shadow: 0 2px 8px 0 rgba(52,53,65,0.10);
+  transition: background-color 250ms ease, color 250ms ease, border-color 250ms ease, box-shadow 250ms ease;
+}
+
+/* ProvenanceViewer */
+.provenance-viewer {
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px 0 rgba(16,21,40,0.04);
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+/* EmotionIndicator */
+.emotion-indicator {
+  background: var(--bg-panel);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px 0 rgba(59,130,246,0.08);
+  transition: background-color 300ms ease, color 300ms ease, box-shadow 300ms ease;
+}
+
+/* Dropdowns */
+.select, select {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px 0 rgba(16,21,40,0.04);
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+.select:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 2px 12px 0 rgba(59,130,246,0.10);
+}
+
+/* Smooth transitions for all major containers */
+.topbar, .card, .chat-window, .document-panel, .provenance-viewer, .message-input, .bubble, .button, .select, select, .emotion-indicator {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
