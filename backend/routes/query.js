@@ -72,24 +72,25 @@ router.post('/voice', upload.single('file'), async (req, res) => {
       maxBodyLength: Infinity
     });
     const data = resp && resp.data ? resp.data : {};
-    // Optionally, send text to RAG endpoint for answer
-    let answer = data.text || '';
+    // Get transcribed text from Python service
+    const transcribedText = data.text || '';
+    let answer = transcribedText;
     let emotion = data.emotion || 'neutral';
     let sources = [];
     // If you want to run RAG, call Python RAG endpoint here
-    if (answer) {
+    if (transcribedText) {
       try {
         const ragUrl = process.env.PYTHON_RAG_URL || 'http://localhost:8000/query-rag';
-        const ragResp = await axios.post(ragUrl, { userId: uid, query: answer, emotion });
+        const ragResp = await axios.post(ragUrl, { userId: uid, query: transcribedText, emotion });
         if (ragResp && ragResp.data) {
-          answer = ragResp.data.answer || answer;
+          answer = ragResp.data.answer || transcribedText;
           sources = ragResp.data.sources || [];
         }
       } catch (e) {
         // fallback: just use transcribed text
       }
     }
-    return res.json({ answer, emotion, sources });
+    return res.json({ text: transcribedText, answer, emotion, sources });
   } catch (err) {
     console.error('query.voice error for user', uid, err && err.message ? err.message : err);
     const status = err && err.response && err.response.status ? err.response.status : 500;
