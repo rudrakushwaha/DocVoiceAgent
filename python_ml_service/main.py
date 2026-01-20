@@ -41,6 +41,7 @@ class QueryRequest(BaseModel):
     userId: str
     query: str
     emotion: str = 'neutral'
+    history: list = []
 
 
 @app.post('/process-document')
@@ -74,7 +75,7 @@ async def api_voice_to_text_emotion(file: UploadFile = File(...)):
 @app.post('/query-rag')
 async def api_query_rag(req: QueryRequest):
     try:
-        ans = await query_rag(req.userId, req.query, req.emotion)
+        ans = await query_rag(req.userId, req.query, req.emotion, req.history)
         return ans
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

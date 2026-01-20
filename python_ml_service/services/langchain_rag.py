@@ -43,28 +43,17 @@ def is_generic_query(query: str) -> bool:
     
     return False
 
-async def query_rag(userId: str, query: str, emotion: str = 'neutral'):
-    # Check if query is generic (doesn't need documents)
+async def query_rag(userId: str, query: str, emotion: str = 'neutral', history: list = None):
     is_generic = is_generic_query(query)
-    
     results = []
     sources = []
     context_texts = []
-    
-    # Only search documents if query is specific
     if not is_generic:
-        # embed query
         q_emb = embed_texts([query])
-
-        # search faiss
         results = search_user_index(userId, q_emb, top_k=5)
-        
-        # Filter results by relevance threshold
         relevant_results = [r for r in results if r.get('score', 0) >= RELEVANCE_THRESHOLD]
-        
         print(f"Query: {query}")
         print(f"Total results: {len(results)}, Relevant (score >= {RELEVANCE_THRESHOLD}): {len(relevant_results)}")
-        
         for r in relevant_results:
             meta = r.get('meta') or {}
             chunk_id = meta.get('chunkId') or meta.get('docId')
@@ -72,34 +61,41 @@ async def query_rag(userId: str, query: str, emotion: str = 'neutral'):
             sources.append(chunk_id)
             context_texts.append(meta.get('preview', ''))
             print(f"  - {chunk_id}: score={score:.3f}")
-
-    prompt = build_prompt(query, context_texts, emotion, is_generic)
-
+    # Use last 8 messages from history if provided
+    history_msgs = []
+    if history and isinstance(history, list):
+        history_msgs = history[-8:]
+    # Build OpenAI messages list
+    messages = [
+        {'role': 'system', 'content': 'You are a helpful, document-grounded assistant. Answer user questions using your own knowledge and, if relevant, the provided document context.'}
+    ]
+    # Add conversation history
+    for m in history_msgs:
+        if m['role'] in ['user', 'assistant']:
+            messages.append({'role': m['role'], 'content': m['content']})
+    # Add current user query as the last user message
+    messages.append({'role': 'user', 'content': query})
+    # For document queries, add document context as a user message (so model uses it as context)
+    if not is_generic and context_texts:
+        ctx = '\n\n'.join([c for c in context_texts if c])
+        if ctx:
+            messages.append({'role': 'user', 'content': f'DOCUMENT CONTEXT:\n{ctx}'})
     model_name = os.environ.get('OPENAI_CHAT_MODEL', CHAT_MODEL_DEFAULT)
     resp = openai.ChatCompletion.create(
         model=model_name,
-        messages=[{'role':'system','content':'You are a helpful assistant.'},{'role':'user','content':prompt}],
-        max_tokens=500
+        messages=messages,
+        max_tokens=500,
+        temperature=0.7
     )
-
     answer = resp['choices'][0]['message']['content']
     confidence = 0.8
-    
-    return { 
-        'answer': answer, 
-        'sources': sources if not is_generic else [],  # No sources for generic queries
+    return {
+        'answer': answer,
+        'sources': sources if not is_generic else [],
         'confidence': confidence,
         'is_generic': is_generic
     }
 
-def build_prompt(query: str, contexts: List[str], emotion: str, is_generic: bool = False):
-    if is_generic:
-        # For generic queries, don't include document context
-        prompt = f"User query: {query}\nEmotion: {emotion}\n\nProvide a helpful and concise answer."
-    else:
-        ctx = '\n\n'.join([c for c in contexts if c])
-        if ctx:
-            prompt = f"User query: {query}\nEmotion: {emotion}\n\nContext from documents:\n{ctx}\n\nProvide a concise answer based on the documents if relevant, otherwise provide your own knowledge."
-        else:
-            prompt = f"User query: {query}\nEmotion: {emotion}\n\nNo relevant documents found. Provide a helpful answer based on your knowledge."
-    return prompt
+def build_prompt_with_history(query: str, contexts: list, emotion: str, is_generic: bool, history_msgs: list):
+    # Deprecated: now handled by OpenAI messages list
+    return ''

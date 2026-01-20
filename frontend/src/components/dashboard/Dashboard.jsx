@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import './dashboard.css';
 import TopBar from './TopBar';
@@ -48,6 +47,7 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([]);
   const [aiTyping, setAiTyping] = useState(false);
   const [voiceOutput, setVoiceOutput] = useState(false);
+  const [sessionId, setSessionId] = useState(() => localStorage.getItem('docvoice_sessionId') || null);
 
   const uploadDocument = async (file) => {
     setProcessing(true);
@@ -99,19 +99,77 @@ export default function Dashboard() {
     }
   }
 
-  const sendMessage = async (text)=>{
-    // add user message
-    setMessages(m=>[...m, {role:'user', text}]);
-    // AI typing
+  // Store sessionId in localStorage when it changes
+  useEffect(() => {
+    if (sessionId) localStorage.setItem('docvoice_sessionId', sessionId);
+  }, [sessionId]);
+
+  // On initial mount, rehydrate chat from backend if sessionId exists
+  useEffect(() => {
+    let ignore = false;
+    const rehydrateChat = async () => {
+      const storedSessionId = localStorage.getItem('docvoice_sessionId');
+      console.log('[Rehydrate] sessionId in localStorage:', storedSessionId);
+      if (!storedSessionId) {
+        console.log('[Rehydrate] No sessionId found in localStorage.');
+        return;
+      }
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          console.log('[Rehydrate] No authenticated user.');
+          return;
+        }
+        const token = await user.getIdToken();
+        const base = import.meta.env.VITE_API_URL_BASE || 'http://localhost:4000';
+        const url = `${base}/api/session/${storedSessionId}`;
+        console.log('[Rehydrate] Fetching session messages from:', url);
+        const resp = await fetch(url, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) {
+          console.error('[Rehydrate] Failed to fetch session:', resp.status);
+          throw new Error('failed_to_fetch_session');
+        }
+        const data = await resp.json();
+        console.log('[Rehydrate] Data received from backend:', data);
+        if (!ignore && Array.isArray(data.messages)) {
+          const mapped = data.messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .map(m => ({ role: m.role === 'assistant' ? 'ai' : 'user', text: m.content }));
+          console.log('[Rehydrate] Setting messages:', mapped);
+          setMessages(mapped);
+        } else {
+          console.log('[Rehydrate] No messages array in backend response.');
+        }
+      } catch (err) {
+        if (!ignore) console.error('[Rehydrate] Error:', err);
+      }
+    };
+    rehydrateChat();
+    return () => { ignore = true; };
+  }, []);
+
+  // New Chat handler
+  const handleNewChat = () => {
+    setMessages([]);
+    setSessionId(null);
+    localStorage.removeItem('docvoice_sessionId');
+  };
+
+  const sendMessage = async (text) => {
+    setMessages(m => [...m, { role: 'user', text }]);
     setAiTyping(true);
-    try{
-      const res = await getAIResponse(text);
+    try {
+      const res = await getAIResponse(text, undefined, sessionId);
       setAiTyping(false);
-      setMessages(m=>[...m, {role:'ai', text:res.text, sources:res.sources, emotion:res.emotion}]);
-      if(voiceOutput){ handleSpeak(res.text); }
-    }catch(err){
+      setMessages(m => [...m, { role: 'ai', text: res.text, sources: res.sources, emotion: res.emotion }]);
+      if (!sessionId && res.sessionId) setSessionId(res.sessionId);
+      if (voiceOutput) { handleSpeak(res.text); }
+    } catch (err) {
       setAiTyping(false);
-      setMessages(m=>[...m, {role:'ai', text:'Error generating response', sources:[], emotion:'Neutral'}]);
+      setMessages(m => [...m, { role: 'ai', text: 'Error generating response', sources: [], emotion: 'Neutral' }]);
     }
   }
 
@@ -204,9 +262,11 @@ export default function Dashboard() {
   return (
     <div className="dashboard-root">
       <TopBar />
+      <button className="new-chat-btn" onClick={handleNewChat}>
+        <span className="new-chat-icon">&#x1F5E3;</span> New Chat
+      </button>
       <div className="main-area">
         <DocumentPanel documents={documents} onUpload={uploadDocument} onDelete={deleteDocument} processing={processing} />
-
         <div className="right-col">
           <ChatWindow messages={messages} aiTyping={aiTyping || isProcessingVoice} />
           <MessageInput
