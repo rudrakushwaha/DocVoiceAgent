@@ -56,7 +56,8 @@ async def api_process_document(req: ProcessRequest):
 @app.post('/delete-document')
 async def api_delete_document(req: DeleteRequest):
     try:
-        await delete_document_vectors(req.userId, req.docId)
+        # delete_document_vectors is a synchronous function, do not await it
+        delete_document_vectors(req.userId, req.docId)
         return { 'ok': True }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
