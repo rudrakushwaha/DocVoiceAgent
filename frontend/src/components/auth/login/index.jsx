@@ -57,6 +57,7 @@ const Login = () => {
                         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
                             <div>
                                 <div className="brand-badge">DV</div>
+                                <span className='brand-name'>DocVoice AI-AGENT</span>
                             </div>
                             <div style={{display:'none'}} className="md-only" />
                         </div>

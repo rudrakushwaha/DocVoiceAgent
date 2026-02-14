@@ -124,3 +124,11 @@
 
 /* accessible focus visible */
 .input:focus-visible, .btn-primary:focus-visible, .btn-ghost:focus-visible{ outline: 3px solid rgba(79,70,229,0.14); outline-offset:3px }
+
+
+.brand-name{
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-left: 0.75rem;
+  color: #1e293b; /* slate-800 */
+}

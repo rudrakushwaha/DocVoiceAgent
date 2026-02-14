@@ -1,12 +1,29 @@
+
 import os
 from services.embeddings import embed_texts
 from services.faiss_index import search_user_index
 import openai
+from services.mongo import chunks_collection
+
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
-CHAT_MODEL_DEFAULT = os.environ.get("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
+CHAT_MODEL_DEFAULT = os.environ.get("OPENAI_CHAT_MODEL", "gpt-4.1-mini")
 RELEVANCE_THRESHOLD = float(os.environ.get("RELEVANCE_THRESHOLD", 0.60))
+
+def get_chunk_texts_by_ids(chunk_ids, userId):
+    if not chunk_ids:
+        return []
+
+    return list(
+        chunks_collection.find(
+            {
+                "chunkId": {"$in": chunk_ids},
+                "userId": userId
+            },
+            {"_id": 0, "chunkId": 1, "text": 1}
+        )
+    )
 
 
 async def query_rag(
@@ -15,8 +32,6 @@ async def query_rag(
     emotion: str = "neutral",
     history: list = None
 ):
-    sources = []
-    context_texts = []
 
     # 1️⃣ Embed query
     query_embedding = embed_texts([query])
@@ -29,6 +44,7 @@ async def query_rag(
 
     # 3️⃣ Convert FAISS distance → similarity
     relevant_results = []
+    chunk_ids = []
 
     for r in results:
         distance = r.get("score", 999)
@@ -43,37 +59,29 @@ async def query_rag(
         if similarity >= RELEVANCE_THRESHOLD:
             relevant_results.append(r)
 
+            meta = r.get("meta", {})
+            chunk_id = meta.get("chunkId")
+
+            if chunk_id:
+                chunk_ids.append(chunk_id)
+
+
     print(
         f"Relevant (similarity >= {RELEVANCE_THRESHOLD}): "
         f"{len(relevant_results)}"
     )
 
-    # ======================================================
-    # ✅ FIXED BLOCK — THIS WAS THE MAIN ISSUE
-    # ======================================================
-    # 4️⃣ Collect REAL document text (not preview)
-    for r in relevant_results:
-        meta = r.get("meta", {})
-
-        chunk_id = meta.get("chunkId") or meta.get("docId")
-
-        # 🔥 this is the actual chunk text
-        text = (
-            meta.get("text")
-            or meta.get("chunk")
-            or meta.get("content")
-            or meta.get("page_content")
-            or meta.get("preview", "")
-        )
-
-        if text.strip():
-            context_texts.append(text)
-
-        if chunk_id:
-            sources.append(chunk_id)
-
-    # ======================================================
-
+    # 4️⃣ Fetch chunk texts from MongoDB
+    context_texts = []
+    sources = []
+    if chunk_ids:
+        chunk_docs = get_chunk_texts_by_ids(chunk_ids, userId)
+        for doc in chunk_docs:
+            text = doc.get("text", "")
+            if text.strip():
+                context_texts.append(text)
+                sources.append(doc.get("chunkId"))
+   
     # 5️⃣ Conversation history
     history_msgs = history[-8:] if history else []
 
@@ -130,6 +138,10 @@ async def query_rag(
     )
 
     answer = response["choices"][0]["message"]["content"]
+
+    # 8️⃣ If model says 'The document does not contain this information', return empty sources
+    if answer.strip().lower() == "the document does not contain this information.":
+        sources = []
 
     confidence = round(
         sum(r["similarity"] for r in relevant_results)

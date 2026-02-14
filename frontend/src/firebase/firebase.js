@@ -4,8 +4,12 @@ import { initializeApp } from "firebase/app";
 // https://firebase.google.com/docs/web/setup#available-libraries
 import {getAuth} from 'firebase/auth'
 
-// Your web app's Firebase configuration
-const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
+// Your web app's Firebase configuration (from Vite environment variables)
+const firebaseConfig = JSON.parse(import.meta.env.VITE_FIREBASE_CONFIG);
+
+
+
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

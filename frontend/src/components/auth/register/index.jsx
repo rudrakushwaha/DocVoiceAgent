@@ -53,6 +53,10 @@ const Register = () => {
                 <div className="register-card">
                     <div className="register-grid">
                         <div className="register-left">
+                            <div>
+                                <div className="brand-badge">DV</div>
+                                <span className='brand-name'>DocVoice AI-AGENT</span>
+                            </div>
                             <h3 className="huge-title">Create a New Account</h3>
                             <p className="muted" style={{marginTop:6}}>Start your journey with DocVoice</p>
 
