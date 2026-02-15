@@ -29,6 +29,8 @@ def extract_text_from_file(content: bytes, source_url: str = ''):
             for element in page_layout:
                 if isinstance(element, LTTextContainer):
                     page_text += element.get_text()
+                    page_text = re.sub(r'\s+', ' ', page_text)
+                    page_text = re.sub(r'([A-Z]\s){3,}', '', page_text)
 
             pages.append({
                 "pageNumber": page_number,

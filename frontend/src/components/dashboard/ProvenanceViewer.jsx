@@ -13,7 +13,7 @@ export default function ProvenanceViewer({ sources }) {
           <div key={index} className="source-card">
 
             <div className="source-title">
-              📄 {src.docName} (Page {src.pageNumber})
+              📄 [{src.number}] {src.docName} (Page {src.pageNumber})
             </div>
 
             <div className="source-snippet">

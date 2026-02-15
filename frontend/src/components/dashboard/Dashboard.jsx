@@ -122,7 +122,7 @@ export default function Dashboard() {
         }
         const token = await user.getIdToken();
         const base = import.meta.env.VITE_API_URL_BASE || 'http://localhost:4000';
-        const url = `${base}/api/session/${storedSessionId}`;
+        const url = `${base}/api/query/session/${storedSessionId}`;
         console.log('[Rehydrate] Fetching session messages from:', url);
         const resp = await fetch(url, {
           method: 'GET',

@@ -5,6 +5,7 @@ from services.faiss_index import search_user_index
 import openai
 from services.mongo import chunks_collection
 from utils.text_utils import extract_best_sentence
+import re
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
@@ -79,28 +80,30 @@ async def query_rag(
     # 4️⃣ Fetch chunk texts from MongoDB
     context_texts = []
     sources = []
+    context_blocks = []
+    
     if chunk_ids:
         chunk_docs = get_chunk_texts_by_ids(chunk_ids, userId)
-        for doc in chunk_docs:
+
+        for idx, doc in enumerate(chunk_docs, start=1):
             text = doc.get("text", "")
-            if text.strip():
-                best_sentence = extract_best_sentence(query, text)
-                context_texts.append(text)
-                sources.append({
-                    "chunkId": doc.get("chunkId"),
-                    "docName": doc.get("docName"),
-                    "pageNumber": doc.get("pageNumber"),
-                    "snippet":  best_sentence })
+            
+            if not text:
+                continue
+
+            # Build labeled context block
+            block = f"[{idx}] {doc['docName']} (Page {doc['pageNumber']})\n{text}"
+            context_blocks.append(block)
+
+            # Build source metadata (no best_sentence)
+            sources.append({
+                "number": idx,
+                "chunkId": doc.get("chunkId"),
+                "docName": doc.get("docName"),
+                "pageNumber": doc.get("pageNumber"),
+                "snippet": text[:300]
+            })  
                 
-    # Deduplicate by (docName + pageNumber)
-    unique_sources = {}
-    for s in sources:
-        key = (s["docName"], s["pageNumber"], s["snippet"])
-        if key not in unique_sources:
-            unique_sources[key] = s
-
-    sources = list(unique_sources.values())
-
 
    
     # 5️⃣ Conversation history
@@ -113,6 +116,7 @@ async def query_rag(
             "content": (
                 "You are a document-grounded assistant.\n"
                 "You must answer strictly using the DOCUMENT CONTEXT.\n"
+                "After each factual statement, cite the source number in square brackets.\n"
                 "If the answer is not explicitly present, say:\n"
                 "'The document does not contain this information.'"
             )
@@ -124,12 +128,10 @@ async def query_rag(
         if m.get("role") in ("user", "assistant"):
             messages.append(m)
 
-    # document context FIRST
-    if context_texts:
-        ctx = "\n\n".join(context_texts)
 
-        print("\nCTX LENGTH:", len(ctx))
-        print(ctx[:300])  # debug
+    # document context FIRST
+    if context_blocks:
+        ctx = "\n\n".join(context_blocks)
 
         messages.append(
             {
@@ -160,9 +162,16 @@ async def query_rag(
 
     answer = response["choices"][0]["message"]["content"]
 
+    # citation numbers inside the llm output answer
+    used_numbers = set(map(int, re.findall(r'\[(\d+)\]', answer)))
+
+    
+
     # 8️⃣ If model says 'The document does not contain this information', return empty sources
     if answer.strip().lower() == "the document does not contain this information.":
         sources = []
+
+    sources = [s for s in sources if s["number"] in used_numbers]
 
     confidence = round(
         sum(r["similarity"] for r in relevant_results)

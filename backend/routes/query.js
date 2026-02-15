@@ -125,8 +125,10 @@ router.post('/voice', upload.single('file'), async (req, res) => {
 // GET /api/session/:sessionId
 router.get('/session/:sessionId', async (req, res) => {
   const uid = req.user && req.user.uid;
+
   if (!uid) return res.status(401).json({ error: 'unauthorized' });
   const { sessionId } = req.params;
+
   if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
   try {
     const session = await Session.findOne({ sessionId, userId: uid });
