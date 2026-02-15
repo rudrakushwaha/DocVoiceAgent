@@ -60,6 +60,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       const toInsert = chunks.map((c, idx) => ({
         chunkId: c.chunkId || `${docId}-${idx}-${Date.now()}`,
         docId,
+        docName: originalName,          // NEW
+        pageNumber: c.pageNumber,
         userId: uid,
         text: c.text || '',
         faissIndex: c.faissIndex || (c.index ? String(c.index) : undefined),

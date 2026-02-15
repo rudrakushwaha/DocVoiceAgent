@@ -4,7 +4,7 @@ from services.embeddings import embed_texts
 from services.faiss_index import search_user_index
 import openai
 from services.mongo import chunks_collection
-
+from utils.text_utils import extract_best_sentence
 
 openai.api_key = os.environ.get("OPENAI_API_KEY")
 
@@ -21,7 +21,12 @@ def get_chunk_texts_by_ids(chunk_ids, userId):
                 "chunkId": {"$in": chunk_ids},
                 "userId": userId
             },
-            {"_id": 0, "chunkId": 1, "text": 1}
+            {"_id": 0,
+            "chunkId": 1, 
+            "docId": 1,
+            "docName": 1,
+            "pageNumber": 1,
+            "text": 1}
         )
     )
 
@@ -79,8 +84,24 @@ async def query_rag(
         for doc in chunk_docs:
             text = doc.get("text", "")
             if text.strip():
+                best_sentence = extract_best_sentence(query, text)
                 context_texts.append(text)
-                sources.append(doc.get("chunkId"))
+                sources.append({
+                    "chunkId": doc.get("chunkId"),
+                    "docName": doc.get("docName"),
+                    "pageNumber": doc.get("pageNumber"),
+                    "snippet":  best_sentence })
+                
+    # Deduplicate by (docName + pageNumber)
+    unique_sources = {}
+    for s in sources:
+        key = (s["docName"], s["pageNumber"], s["snippet"])
+        if key not in unique_sources:
+            unique_sources[key] = s
+
+    sources = list(unique_sources.values())
+
+
    
     # 5️⃣ Conversation history
     history_msgs = history[-8:] if history else []
