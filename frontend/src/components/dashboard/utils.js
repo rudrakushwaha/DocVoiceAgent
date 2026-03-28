@@ -1,8 +1,9 @@
 // mock utilities for the dashboard
 export const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
 
-import { auth } from '../../firebase/firebase';
+import { auth } from "../../firebase/firebase";
 
+/*
 export async function getAIResponse(message, emotion, sessionId) {
   // Try real backend call with Firebase ID token
   try {
@@ -52,6 +53,62 @@ export async function getAIResponse(message, emotion, sessionId) {
   }
 }
 
+*/
+
+export async function getAIResponse(message, emotion, sessionId) {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const token = await user.getIdToken();
+
+  const payload = { message };
+  if (emotion) payload.emotion = emotion;
+  if (sessionId) payload.sessionId = sessionId;
+
+  const apiUrl =
+    import.meta.env.VITE_API_URL || "http://localhost:4000/api/query/ask"; // ⚠️ verify this matches backend
+
+  console.log("➡️ Sending request to:", apiUrl);
+  console.log("➡️ Payload:", payload);
+
+  const resp = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  // 🔥 HARD FAIL (NO MOCK FALLBACK)
+  if (!resp.ok) {
+    let err;
+    try {
+      err = await resp.json();
+    } catch {
+      err = await resp.text();
+    }
+
+    console.error("❌ API ERROR:", err);
+    throw new Error("Backend API failed");
+  }
+
+  const data = await resp.json();
+
+  console.log("✅ BACKEND RESPONSE:", data);
+
+  return {
+    text: data.answer || "",
+    emotion: data.emotion || "neutral",
+    sources: data.sources || [],
+    confidence: data.confidence || null,
+    sessionId: data.sessionId || sessionId || null,
+  };
+}
+
 // startVoiceRecording now returns { start, stop, isRecording, promise }
 export function startVoiceRecording(maxDurationSec = 30) {
   let mediaRecorder = null;
@@ -64,7 +121,7 @@ export function startVoiceRecording(maxDurationSec = 30) {
     resolvePromise = resolve;
     rejectPromise = reject;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      return reject(new Error('media_not_supported'));
+      return reject(new Error("media_not_supported"));
     }
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -73,26 +130,34 @@ export function startVoiceRecording(maxDurationSec = 30) {
     }
     mediaRecorder = new MediaRecorder(stream);
     chunks = [];
-    mediaRecorder.ondataavailable = (ev) => { if (ev.data && ev.data.size) chunks.push(ev.data); };
-    mediaRecorder.onerror = (e) => { console.warn('recorder error', e); };
+    mediaRecorder.ondataavailable = (ev) => {
+      if (ev.data && ev.data.size) chunks.push(ev.data);
+    };
+    mediaRecorder.onerror = (e) => {
+      console.warn("recorder error", e);
+    };
     mediaRecorder.onstop = async () => {
       _isRecording = false;
-      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const blob = new Blob(chunks, { type: "audio/webm" });
       try {
         const form = new FormData();
-        form.append('file', blob, 'recording.webm');
-        const pythonUrl = import.meta.env.VITE_PYTHON_URL || 'http://localhost:8000/voice-to-text-emotion';
-        const resp = await fetch(pythonUrl, { method: 'POST', body: form });
+        form.append("file", blob, "recording.webm");
+        const pythonUrl =
+          import.meta.env.VITE_PYTHON_URL ||
+          "http://localhost:8000/voice-to-text-emotion";
+        const resp = await fetch(pythonUrl, { method: "POST", body: form });
         if (!resp.ok) {
           const err = await resp.text().catch(() => null);
-          return rejectPromise(new Error(err || 'transcription_failed'));
+          return rejectPromise(new Error(err || "transcription_failed"));
         }
         const data = await resp.json();
         resolvePromise(data);
       } catch (err) {
         rejectPromise(err);
       } finally {
-        try { stream.getTracks().forEach(t => t.stop()); } catch (e) { }
+        try {
+          stream.getTracks().forEach((t) => t.stop());
+        } catch (e) {}
       }
     };
   });
@@ -102,23 +167,26 @@ export function startVoiceRecording(maxDurationSec = 30) {
         _isRecording = true;
         mediaRecorder.start();
         stopTimeout = setTimeout(() => {
-          if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+          if (mediaRecorder && mediaRecorder.state === "recording")
+            mediaRecorder.stop();
         }, maxDurationSec * 1000);
       }
     },
     stop: () => {
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
         clearTimeout(stopTimeout);
         mediaRecorder.stop();
         _isRecording = false;
       }
     },
-    get isRecording() { return _isRecording; },
-    promise
+    get isRecording() {
+      return _isRecording;
+    },
+    promise,
   };
 }
 
 export function handleSpeak(text) {
   // placeholder: integrate Web Speech API or TTS provider
-  console.log('handleSpeak() placeholder - would speak:', text);
+  console.log("handleSpeak() placeholder - would speak:", text);
 }

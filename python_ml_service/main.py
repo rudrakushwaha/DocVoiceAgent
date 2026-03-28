@@ -13,8 +13,10 @@ from pydantic import BaseModel
 
 from services.document_processor import process_document
 from services.faiss_index import delete_document_vectors, search_user_index
-from services.whisper_ser import transcribe_and_emotion
+#rom services.whisper_ser import transcribe_and_emotion
 from services.langchain_rag import query_rag
+
+print("PYTHON KEY:", os.getenv("OPENAI_API_KEY")) 
 
 app = FastAPI(title='DocVoice-Agent ML Service')
 
@@ -63,14 +65,14 @@ async def api_delete_document(req: DeleteRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post('/voice-to-text-emotion')
-async def api_voice_to_text_emotion(file: UploadFile = File(...)):
-    try:
-        audio_bytes = await file.read()
-        result = await transcribe_and_emotion(audio_bytes)
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+#@app.post('/voice-to-text-emotion')
+#async def api_voice_to_text_emotion(file: UploadFile = File(...)):
+ #   try:
+  #      audio_bytes = await file.read()
+   #     result = await transcribe_and_emotion(audio_bytes)
+    #    return result
+    #except Exception as e:
+     #   raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post('/query-rag')
