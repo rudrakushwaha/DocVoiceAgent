@@ -1,0 +1,101 @@
+{
+  "name": "DocAI Schedule Event - Fixed",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "docai-schedule", 
+        "responseMode": "onReceived"
+      },
+      "id": "webhook1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "docai-schedule"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "eventTitle",
+              "value": "={{ $json.title || $json.summary || 'DocAI Reminder' }}"
+            },
+            {
+              "name": "eventStart",
+              "value": "={{ $json.eventTime || $json.startDateTime }}"
+            },
+            {
+              "name": "eventDescription", 
+              "value": "={{ $json.description || $json.originalQuery }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set1",
+      "name": "Extract Calendar Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list",
+          "cachedResultName": "primary"
+        },
+        "event": {
+          "summary": "={{ $json.eventTitle }}",
+          "start": {
+            "dateTime": "={{ $json.eventStart }}"
+          },
+          "description": "={{ $json.eventDescription }}"
+        },
+        "options": {}
+      },
+      "id": "googleCalendar1",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "google-calendar-oauth2",
+          "name": "Google Calendar OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Calendar Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Calendar Data": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event", 
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "1"
+}

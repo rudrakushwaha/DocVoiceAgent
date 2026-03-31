@@ -4,7 +4,8 @@ import TopBar from './TopBar';
 import DocumentPanel from './DocumentPanel';
 import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
-import { getAIResponse, handleSpeak } from './utils';
+import PDFDownloadModal from './PDFDownloadModal';
+import { getAIResponse, handleSpeak, executeAgentAction } from './utils';
 import { auth } from '../../firebase/firebase';
 
 
@@ -47,7 +48,22 @@ export default function Dashboard() {
   const [messages, setMessages] = useState([]);
   const [aiTyping, setAiTyping] = useState(false);
   const [voiceOutput, setVoiceOutput] = useState(false);
-  const [sessionId, setSessionId] = useState(() => localStorage.getItem('docvoice_sessionId') || null);
+  const [sessionId, setSessionId] = useState(() => {
+    // Always generate a sessionId if none exists
+    const stored = localStorage.getItem('docvoice_sessionId');
+    if (stored) return stored;
+    
+    // Generate new sessionId if none stored
+    const newSessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('docvoice_sessionId', newSessionId);
+    return newSessionId;
+  });
+  const [notification, setNotification] = useState(null);
+  const [pdfModal, setPdfModal] = useState({
+    isOpen: false,
+    pdfUrl: null,
+    filename: null
+  });
 
   const uploadDocument = async (file) => {
     setProcessing(true);
@@ -158,6 +174,12 @@ export default function Dashboard() {
     localStorage.removeItem('docvoice_sessionId');
   };
 
+  // Show notification helper
+  const showNotification = (message, type = 'info') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 5000);
+  };
+
   const sendMessage = async (text) => {
     setMessages(m => [...m, { role: 'user', text }]);
     setAiTyping(true);
@@ -165,8 +187,94 @@ export default function Dashboard() {
       const res = await getAIResponse(text, undefined, sessionId);
       setAiTyping(false);
       setMessages(m => [...m, { role: 'ai', text: res.text, sources: res.sources, emotion: res.emotion }]);
-      if (!sessionId && res.sessionId) setSessionId(res.sessionId);
+      // Always update sessionId if backend returns one (handles session creation/mismatch)
+      if (res.sessionId) {
+        console.log('[Dashboard] Updating sessionId from backend:', res.sessionId);
+        setSessionId(res.sessionId);
+      }
       if (voiceOutput) { handleSpeak(res.text); }
+      
+      // NEW: Call agent for action detection after RAG response
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          console.log("🤖 Calling agent for action detection...");
+          
+          // Add small delay to ensure session is updated with latest message
+          setTimeout(async () => {
+            const agentResult = await executeAgentAction(user.uid, text, res.text, sessionId);
+            console.log("🤖 Agent result:", agentResult);
+            
+            if (agentResult.action && agentResult.status === 'success') {
+              // Create action confirmation message
+              let actionConfirmation = '';
+              
+              switch (agentResult.action) {
+                case 'send_email':
+                  actionConfirmation = `✅ Email successfully sent to ${agentResult.data.email}`;
+                  break;
+                case 'generate_pdf':
+                  actionConfirmation = `✅ PDF successfully generated: ${agentResult.data.filename}`;
+                  break;
+                case 'schedule_event':
+                  actionConfirmation = `✅ Event successfully scheduled for ${agentResult.data.eventTimeFormatted}`;
+                  break;
+                default:
+                  actionConfirmation = `✅ Action completed: ${agentResult.action}`;
+              }
+              
+              // Replace the last AI message with action confirmation
+              setMessages(m => {
+                const newMessages = [...m];
+                // Replace the last AI message (which was the RAG response) with action confirmation
+                newMessages[newMessages.length - 1] = {
+                  role: 'ai',
+                  text: actionConfirmation,
+                  sources: [],
+                  emotion: 'Positive'
+                };
+                return newMessages;
+              });
+              
+              // Show notification as well
+              switch (agentResult.action) {
+                case 'send_email':
+                  showNotification(`✅ Email sent to ${agentResult.data.email}`, 'success');
+                  break;
+                case 'generate_pdf':
+                  const downloadUrl = `${import.meta.env.VITE_API_URL_BASE || 'http://localhost:4000'}${agentResult.data.downloadUrl}`;
+                  
+                  // Show modal on main page
+                  setPdfModal({
+                    isOpen: true,
+                    pdfUrl: downloadUrl,
+                    filename: agentResult.data.filename
+                  });
+                  showNotification(`✅ PDF generated: ${agentResult.data.filename}`, 'success');
+                  break;
+                case 'schedule_event':
+                  showNotification(`✅ Event scheduled for ${agentResult.data.eventTimeFormatted}`, 'success');
+                  break;
+                default:
+                  showNotification(`✅ Action completed: ${agentResult.action}`, 'success');
+              }
+              
+              // Speak the action confirmation instead of RAG response
+              if (voiceOutput) { handleSpeak(actionConfirmation); }
+            } else if (agentResult.action === null) {
+              console.log("🤖 No action detected - normal document query");
+            } else {
+              console.log("🤖 Agent action failed:", agentResult);
+            }
+          }, 1000); // Wait 1 second for session to be updated
+        }
+      } catch (agentError) {
+        console.error('❌ Agent action failed:', agentError);
+        console.error('❌ Agent error details:', agentError.message, agentError.stack);
+        // Show error to user for debugging
+        showNotification(`❌ Agent error: ${agentError.message}`, 'error');
+      }
+      
     } catch (err) {
       setAiTyping(false);
       setMessages(m => [...m, { role: 'ai', text: 'Error generating response', sources: [], emotion: 'Neutral' }]);
@@ -261,6 +369,24 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-root">
+      {notification && (
+        <div 
+          className={`notification notification-${notification.type}`}
+          style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            backgroundColor: notification.type === 'success' ? '#10b981' : '#3b82f6',
+            color: 'white',
+            zIndex: 1000,
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            maxWidth: '400px'
+          }}
+          dangerouslySetInnerHTML={{ __html: notification.message }}
+        />
+      )}
       <TopBar />
       <button className="new-chat-btn" onClick={handleNewChat}>
         <span className="new-chat-icon">&#x1F5E3;</span> New Chat
@@ -281,6 +407,12 @@ export default function Dashboard() {
           />
         </div>
       </div>
+      <PDFDownloadModal
+        isOpen={pdfModal.isOpen}
+        onClose={() => setPdfModal({ isOpen: false, pdfUrl: null, filename: null })}
+        pdfUrl={pdfModal.pdfUrl}
+        filename={pdfModal.filename}
+      />
     </div>
   );
 }
