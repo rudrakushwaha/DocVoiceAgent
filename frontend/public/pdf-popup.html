@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Download - DocAI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .popup-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 32px 24px;
+            text-align: center;
+        }
+
+        .pdf-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .file-info {
+            background: #f3f4f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .file-info h3 {
+            color: #1f2937;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            word-break: break-all;
+        }
+
+        .file-details {
+            display: flex;
+            justify-content: space-around;
+            gap: 16px;
+        }
+
+        .detail {
+            text-align: center;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: #1f2937;
+            font-weight: 600;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #6b7280;
+            border: 1px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .close-info {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .close-info a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+
+        .close-info a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .file-details {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="popup-container">
+        <div class="header">
+            <h1>📄 PDF Generated Successfully!</h1>
+            <p>Your chat history is ready for download</p>
+        </div>
+        
+        <div class="content">
+            <div class="pdf-icon">📋</div>
+            
+            <div class="file-info">
+                <h3 id="filename">Loading...</h3>
+                <div class="file-details">
+                    <div class="detail">
+                        <div class="detail-label">Size</div>
+                        <div class="detail-value" id="filesize">Loading...</div>
+                    </div>
+                    <div class="detail">
+                        <div class="detail-label">Type</div>
+                        <div class="detail-value">Chat History</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="actions">
+                <button id="downloadBtn" class="btn btn-primary">
+                    📥 Download PDF
+                </button>
+                <button id="previewBtn" class="btn btn-secondary">
+                    🔍 Preview
+                </button>
+            </div>
+            
+            <div class="close-info">
+                This window will close automatically after download • 
+                <a href="#" onclick="window.close()">Close manually</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const filename = urlParams.get('filename') || 'document.pdf';
+        const size = urlParams.get('size') || 'Unknown';
+        const downloadUrl = urlParams.get('downloadUrl') || '';
+
+        // Update UI with file info
+        document.getElementById('filename').textContent = filename;
+        document.getElementById('filesize').textContent = size + ' KB';
+
+        // Download button handler
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            if (downloadUrl) {
+                // Create a temporary link to trigger download
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Show success feedback
+                this.textContent = '✅ Downloaded!';
+                this.style.background = 'linear-gradient(135deg, #059669 0%, #047857 100%)';
+                
+                // Close window after a delay
+                setTimeout(() => {
+                    window.close();
+                }, 2000);
+            }
+        });
+
+        // Preview button handler
+        document.getElementById('previewBtn').addEventListener('click', function() {
+            if (downloadUrl) {
+                window.open(downloadUrl, '_blank');
+            }
+        });
+
+        // Auto-focus download button
+        document.getElementById('downloadBtn').focus();
+
+        // Close window if no valid parameters
+        if (!filename || !downloadUrl) {
+            document.querySelector('.popup-container').innerHTML = `
+                <div style="padding: 40px; text-align: center; color: #ef4444;">
+                    <h2>❌ Error</h2>
+                    <p>Invalid download parameters</p>
+                    <button onclick="window.close()" style="margin-top: 20px; padding: 10px 20px; border: none; background: #ef4444; color: white; border-radius: 6px; cursor: pointer;">Close</button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

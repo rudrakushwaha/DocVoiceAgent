@@ -8,6 +8,10 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+.env
+.env.*
+
+backend/uploads/
 
 # Environment Variables
 .env

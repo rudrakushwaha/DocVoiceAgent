@@ -106,6 +106,66 @@ export async function getAIResponse(message, emotion, sessionId) {
   }
 }
 
+<<<<<<< HEAD
+=======
+*/
+
+export async function getAIResponse(message, emotion, sessionId) {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const token = await user.getIdToken();
+
+  const payload = { message };
+  if (emotion) payload.emotion = emotion;
+  // Always pass sessionId (should always exist now)
+  if (sessionId) payload.sessionId = sessionId;
+
+  const apiUrl =
+    import.meta.env.VITE_API_URL || "http://localhost:4000/api/query/ask"; // ⚠️ verify this matches backend
+
+  console.log("➡️ Sending request to:", apiUrl);
+  console.log("➡️ Payload:", payload);
+
+  const resp = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  // 🔥 HARD FAIL (NO MOCK FALLBACK)
+  if (!resp.ok) {
+    let err;
+    try {
+      err = await resp.json();
+    } catch {
+      err = await resp.text();
+    }
+
+    console.error("❌ API ERROR:", err);
+    throw new Error("Backend API failed");
+  }
+
+  const data = await resp.json();
+
+  console.log("✅ BACKEND RESPONSE:", data);
+
+  return {
+    text: data.answer || "",
+    emotion: data.emotion || "neutral",
+    sources: data.sources || [],
+    confidence: data.confidence || null,
+    sessionId: data.sessionId || sessionId || null,
+  };
+}
+
+>>>>>>> 1606054 (agentic feature)
 // startVoiceRecording now returns { start, stop, isRecording, promise }
 export function startVoiceRecording(maxDurationSec = 30) {
   let mediaRecorder = null;
@@ -186,4 +246,53 @@ export function startVoiceRecording(maxDurationSec = 30) {
 export function handleSpeak(text) {
   // placeholder: integrate Web Speech API or TTS provider
   console.log("handleSpeak() placeholder - would speak:", text);
+}
+
+// Agent integration function
+export async function executeAgentAction(userId, query, ragResponse, sessionId = null) {
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  const token = await user.getIdToken();
+
+  // Only send query, ragResponse, and sessionId - userId comes from auth
+  const payload = { query, ragResponse, sessionId };
+
+  const agentUrl = 
+    import.meta.env.VITE_API_URL?.replace('/api/query/ask', '') + "/api/agent/execute" || 
+    "http://localhost:4000/api/agent/execute";
+
+  console.log("🤖 VITE_API_URL:", import.meta.env.VITE_API_URL);
+  console.log("🤖 Sending agent request to:", agentUrl);
+  console.log("🤖 Agent payload:", payload);
+
+  const resp = await fetch(agentUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!resp.ok) {
+    let err;
+    try {
+      err = await resp.json();
+    } catch {
+      err = await resp.text();
+    }
+
+    console.error("❌ AGENT API ERROR:", err);
+    throw new Error("Agent API failed");
+  }
+
+  const data = await resp.json();
+
+  console.log("✅ AGENT RESPONSE:", data);
+
+  return data;
 }

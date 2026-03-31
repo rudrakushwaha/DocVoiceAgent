@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Download - DocAI Assistant</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            text-align: center; 
+            background: #f8f9fa; 
+            margin: 0; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .popup-container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+            max-width: 400px; 
+            width: 90%; 
+        }
+        .success { 
+            color: #28a745; 
+            font-size: 24px; 
+            margin-bottom: 20px; 
+            font-weight: bold; 
+        }
+        .details { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 20px 0; 
+            text-align: left; 
+        }
+        .details h3 { 
+            margin-top: 0; 
+            color: #333; 
+        }
+        .details p { 
+            margin: 8px 0; 
+            color: #666; 
+        }
+        .download-btn { 
+            background: #007bff; 
+            color: white; 
+            padding: 15px 30px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            display: inline-block; 
+            margin: 20px 0; 
+            font-size: 16px; 
+            font-weight: bold; 
+            transition: background 0.3s;
+        }
+        .download-btn:hover { 
+            background: #0056b3; 
+        }
+        .close-btn { 
+            background: #6c757d; 
+            color: white; 
+            padding: 10px 20px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            display: inline-block; 
+            margin-left: 10px; 
+            font-size: 14px; 
+        }
+        .close-btn:hover { 
+            background: #545b62; 
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="popup-container">
+        <div class="success">✅ PDF Generated Successfully!</div>
+        
+        <div class="details">
+            <h3>📄 File Details</h3>
+            <p><strong>Filename:</strong> <span id="filename">Loading...</span></p>
+            <p><strong>Size:</strong> <span id="size">Loading...</span></p>
+            <p><strong>Type:</strong> Chat History PDF</p>
+        </div>
+        
+        <div>
+            <a href="#" id="downloadLink" class="download-btn" target="_blank">📥 Download PDF</a>
+            <a href="#" onclick="window.close()" class="close-btn">✖ Close</a>
+        </div>
+        
+        <p style="color: #666; font-size: 14px; margin-top: 20px;">
+            Click "Download PDF" to save your chat history to your Downloads folder
+        </p>
+    </div>
+    
+    <script>
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const filename = urlParams.get('filename') || 'document.pdf';
+        const size = urlParams.get('size') || 'Unknown';
+        const downloadUrl = urlParams.get('downloadUrl') || '#';
+        
+        // Update page content
+        document.getElementById('filename').textContent = filename;
+        document.getElementById('size').textContent = size + ' KB';
+        document.getElementById('downloadLink').href = downloadUrl;
+        
+        // Auto-focus on download button
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.download-btn').focus();
+        });
+        
+        // Handle download click
+        document.querySelector('.download-btn').addEventListener('click', function() {
+            setTimeout(() => {
+                if (confirm('PDF downloaded successfully! Close this window?')) {
+                    window.close();
+                }
+            }, 2000);
+        });
+        
+        // Auto-close if no parameters (fallback)
+        if (!urlParams.get('filename')) {
+            document.querySelector('.details').innerHTML = '<p style="color: #dc3545;">Error: No PDF file specified</p>';
+            document.querySelector('.download-btn').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
