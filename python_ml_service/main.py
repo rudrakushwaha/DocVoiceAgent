@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from services.document_processor import process_document
 from services.faiss_index import delete_document_vectors, search_user_index
 from services.whisper_ser import transcribe_and_emotion
+from services.text_emotion import detect_text_emotion, learn_emotion_pattern
 from services.langchain_rag import query_rag
 
 app = FastAPI(title='DocVoice-Agent ML Service')
@@ -42,6 +43,13 @@ class QueryRequest(BaseModel):
     query: str
     emotion: str = 'neutral'
     history: list = []
+
+
+class EmotionFeedbackRequest(BaseModel):
+    userId: str
+    text: str
+    detected_emotion: str
+    correct_emotion: str
 
 
 @app.post('/process-document')
@@ -73,11 +81,30 @@ async def api_voice_to_text_emotion(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post('/text-emotion')
+async def api_text_emotion(req: QueryRequest):
+    try:
+        result = detect_text_emotion(req.query)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post('/query-rag')
 async def api_query_rag(req: QueryRequest):
     try:
         ans = await query_rag(req.userId, req.query, req.emotion, req.history)
         return ans
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post('/emotion-feedback')
+async def api_emotion_feedback(req: EmotionFeedbackRequest):
+    try:
+        # Learn from user feedback
+        learn_emotion_pattern(req.text, req.correct_emotion)
+        return {'status': 'learned', 'text': req.text, 'learned_emotion': req.correct_emotion}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
