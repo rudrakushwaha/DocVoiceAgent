@@ -109,7 +109,96 @@ async def query_rag(
     # 5️⃣ Conversation history
     history_msgs = history[-8:] if history else []
 
-    # 6️⃣ Build messages
+    # 6️⃣ Build emotional response behavior
+    EMOTION_CONFIG = {
+        "frustrated": {
+            "system_instruction": (
+                "CRITICAL: The user is FRUSTRATED. Your response MUST:\n"
+                "1. START with empathy: Acknowledge their frustration explicitly\n"
+                "2. SIMPLIFY: Use short sentences, avoid jargon, break complex ideas into bite-sized pieces\n"
+                "3. BE SUPPORTIVE: Use warm, reassuring language\n"
+                "4. ORGANIZE: Use bullet points or numbered lists for clarity\n"
+                "5. OFFER SOLUTIONS: Suggest next steps or alternatives\n\n"
+                "Example opening: 'I understand this is frustrating. Let me break this down...'\n"
+                "Response length: Keep to 2-3 paragraphs MAX, then offer to clarify further.\n"
+                "Tone: Calm, patient, encouraging"
+            ),
+            "temperature": 0.3,  # More conservative/predictable
+            "max_tokens": 400
+        },
+        "confused": {
+            "system_instruction": (
+                "CRITICAL: The user is CONFUSED. Your response MUST:\n"
+                "1. START by validating: 'That's a great question' / 'This can be confusing'\n"
+                "2. STRUCTURE: Provide step-by-step explanation with clear transitions\n"
+                "3. USE EXAMPLES: Include concrete examples from the document\n"
+                "4. DEFINE TERMS: Explain any technical terms or concepts\n"
+                "5. CHECK UNDERSTANDING: End with 'Does this help?' or offer further clarification\n\n"
+                "Example structure:\n"
+                "  • First, let's understand...\n"
+                "  • Second, the key point is...\n"
+                "  • Finally, this means...\n"
+                "Response length: Detailed (3-4 paragraphs), include examples\n"
+                "Tone: Patient, educational, supportive"
+            ),
+            "temperature": 0.25,  # Even more controlled
+            "max_tokens": 550
+        },
+        "sad": {
+            "system_instruction": (
+                "CRITICAL: The user is SAD or dejected. Your response MUST:\n"
+                "1. ACKNOWLEDGE: Recognize their emotional state with compassion\n"
+                "2. ENCOURAGE: Provide frames for positive perspective\n"
+                "3. HIGHLIGHT SOLUTIONS: Focus on what CAN be done\n"
+                "4. BE SUPPORTIVE: Gentle and understanding tone throughout\n"
+                "5. OFFER HOPE: End with constructive next steps\n\n"
+                "Example opening: 'I hear you. Let's look at this from a different angle...'\n"
+                "Response length: Moderate (2-3 paragraphs), balanced\n"
+                "Tone: Warm, compassionate, encouraging, supportive"
+            ),
+            "temperature": 0.35,
+            "max_tokens": 450
+        },
+        "happy": {
+            "system_instruction": (
+                "CRITICAL: The user is HAPPY and positive. Your response SHOULD:\n"
+                "1. MATCH ENERGY: Be enthusiastic and engaging\n"
+                "2. BE CONVERSATIONAL: Use a friendly, natural tone\n"
+                "3. CELEBRATE: Acknowledge the positive momentum\n"
+                "4. PROVIDE INSIGHTS: Go deeper with confidence\n"
+                "5. ENCOURAGE EXPLORATION: Suggest related topics or next steps\n\n"
+                "Example opening: 'Great question! Let me share more details...'\n"
+                "Response length: Can be more detailed and exploratory (3-4 paragraphs)\n"
+                "Tone: Friendly, enthusiastic, engaging, collaborative"
+            ),
+            "temperature": 0.5,  # More creative/varied
+            "max_tokens": 550
+        },
+        "neutral": {
+            "system_instruction": (
+                "NEUTRAL TONE: The user has a neutral emotional stance. Your response SHOULD:\n"
+                "1. BE FACTUAL: Stick to accurate, document-grounded information\n"
+                "2. BE CONCISE: Use clear, direct language without unnecessary elaboration\n"
+                "3. BE STRUCTURED: Organize logically with clear sections\n"
+                "4. BE HELPFUL: Provide actionable information\n"
+                "5. BE NEUTRAL: Maintain professional, balanced perspective\n\n"
+                "Response structure: Introduction → Key points → Sources cited\n"
+                "Response length: Concise (2-3 paragraphs)\n"
+                "Tone: Professional, factual, clear"
+            ),
+            "temperature": 0.2,  # Very factual
+            "max_tokens": 400
+        }
+    }
+
+    # Get emotion config (default to neutral)
+    emotion_lower = emotion.lower() if emotion else "neutral"
+    emotion_cfg = EMOTION_CONFIG.get(emotion_lower, EMOTION_CONFIG["neutral"])
+    
+    system_instruction = emotion_cfg["system_instruction"]
+    response_temperature = emotion_cfg["temperature"]
+    response_max_tokens = emotion_cfg["max_tokens"]
+
     messages = [
         {
             "role": "system",
@@ -118,7 +207,9 @@ async def query_rag(
                 "You must answer strictly using the DOCUMENT CONTEXT.\n"
                 "After each factual statement, cite the source number in square brackets.\n"
                 "If the answer is not explicitly present, say:\n"
-                "'The document does not contain this information.'"
+                "'The document does not contain this information.'\n\n"
+                "---EMOTION-AWARE BEHAVIOR---\n"
+                f"{system_instruction}"
             )
         }
     ]
@@ -148,7 +239,7 @@ async def query_rag(
         }
     )
 
-    # 7️⃣ LLM call
+    # 7️⃣ LLM call with emotion-aware parameters
     model_name = os.environ.get(
         "OPENAI_CHAT_MODEL", CHAT_MODEL_DEFAULT
     )
@@ -156,8 +247,8 @@ async def query_rag(
     response = openai.ChatCompletion.create(
         model=model_name,
         messages=messages,
-        temperature=0.2,
-        max_tokens=500,
+        temperature=response_temperature,  # Emotion-based
+        max_tokens=response_max_tokens,    # Emotion-based
     )
 
     answer = response["choices"][0]["message"]["content"]
