@@ -10,6 +10,9 @@ __pycache__/
 .Python
 .env
 .env.*
+
+backend/uploads/
+
 # Environment Variables
 .env
 .env.local
