@@ -4,8 +4,7 @@ import TopBar from './TopBar';
 import DocumentPanel from './DocumentPanel';
 import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
-import PDFDownloadModal from './PDFDownloadModal';
-import { getAIResponse, handleSpeak, executeAgentAction } from './utils';
+import { getAIResponse, detectTextEmotion, handleSpeak } from './utils';
 import { auth } from '../../firebase/firebase';
 
 
@@ -184,14 +183,17 @@ export default function Dashboard() {
     setMessages(m => [...m, { role: 'user', text }]);
     setAiTyping(true);
     try {
-      const res = await getAIResponse(text, undefined, sessionId);
+      console.log(`[sendMessage] Detecting emotion for: "${text.substring(0, 50)}..."`);
+      const detectedEmotion = await detectTextEmotion(text);
+      console.log(`[sendMessage] Detected emotion: ${detectedEmotion}`);
+      
+      const res = await getAIResponse(text, detectedEmotion, sessionId);
       setAiTyping(false);
-      setMessages(m => [...m, { role: 'ai', text: res.text, sources: res.sources, emotion: res.emotion }]);
-      // Always update sessionId if backend returns one (handles session creation/mismatch)
-      if (res.sessionId) {
-        console.log('[Dashboard] Updating sessionId from backend:', res.sessionId);
-        setSessionId(res.sessionId);
-      }
+      
+      console.log(`[sendMessage] AI response emotion: ${res.emotion}, using: ${res.emotion || detectedEmotion}`);
+      
+      setMessages(m => [...m, { role: 'ai', text: res.text, sources: res.sources, emotion: res.emotion || detectedEmotion }]);
+      if (!sessionId && res.sessionId) setSessionId(res.sessionId);
       if (voiceOutput) { handleSpeak(res.text); }
       
       // NEW: Call agent for action detection after RAG response
@@ -276,6 +278,7 @@ export default function Dashboard() {
       }
       
     } catch (err) {
+      console.error(`[sendMessage] Error:`, err);
       setAiTyping(false);
       setMessages(m => [...m, { role: 'ai', text: 'Error generating response', sources: [], emotion: 'Neutral' }]);
     }

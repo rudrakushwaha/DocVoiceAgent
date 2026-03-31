@@ -1,20 +1,21 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
-const axios = require('axios');
-const { v4: uuidv4 } = require('uuid');
-const Session = require('../models/Session');
+const auth = require("../middleware/authMiddleware");
+const axios = require("axios");
+const { v4: uuidv4 } = require("uuid");
+const Session = require("../models/Session");
 
 router.use(auth);
 
 // POST /api/query/ask
-router.post('/ask', async (req, res) => {
+router.post("/ask", async (req, res) => {
   const uid = req.user && req.user.uid;
-  if (!uid) return res.status(401).json({ error: 'unauthorized' });
+  if (!uid) return res.status(401).json({ error: "unauthorized" });
 
   const { message, sessionId } = req.body || {};
-  if (!message || typeof message !== 'string') return res.status(400).json({ error: 'message required' });
-  const emotion = req.body.emotion || 'neutral';
+  if (!message || typeof message !== "string")
+    return res.status(400).json({ error: "message required" });
+  const emotion = req.body.emotion || "neutral";
 
   let session;
   let newSessionId = sessionId;
@@ -34,8 +35,11 @@ router.post('/ask', async (req, res) => {
     if (!session) {
       // Only create a new session if sessionId is missing or not found
       newSessionId = uuidv4();
-      console.log('[QUERY] Creating NEW session:', newSessionId);
-      session = new Session({ sessionId: newSessionId, userId: uid, messages: [] });
+      session = new Session({
+        sessionId: newSessionId,
+        userId: uid,
+        messages: [],
+      });
       await session.save();
       console.log('[QUERY] New session created and saved');
     } else {
@@ -43,9 +47,13 @@ router.post('/ask', async (req, res) => {
     }
 
     // 2. Store user message
-    console.log('[QUERY] Adding user message:', message.substring(0, 50) + '...');
-    session.messages.push({ role: 'user', content: message, timestamp: new Date() });
-    if (session.messages.length > 32) session.messages = session.messages.slice(-32);
+    session.messages.push({
+      role: "user",
+      content: message,
+      timestamp: new Date(),
+    });
+    if (session.messages.length > 32)
+      session.messages = session.messages.slice(-32);
     await session.save();
     console.log('[QUERY] User message saved. Total messages:', session.messages.length);
 
@@ -264,73 +272,172 @@ Your complete chat history has been exported and is ready for download!`;
     // 5. Call Python RAG with history
     const pythonUrl = process.env.PYTHON_RAG_URL || 'http://localhost:8000/query-rag';
     const resp = await axios.post(pythonUrl, { userId: uid, query: message, emotion, history }, { timeout: 1000 * 60 });
-    const data = resp && resp.data ? resp.data : {};
-    const answer = data.answer || '';
-    const sources = Array.isArray(data.sources) ? data.sources : [];
-    const confidence = typeof data.confidence === 'number' ? data.confidence : null;
+    // 3. Prepare last 8 messages for context window
+    const history = session.messages
+      .slice(-8)
+      .map((m) => ({ role: m.role, content: m.content }));
 
-    // 6. Store assistant message
-    console.log('[QUERY] Adding assistant message:', answer.substring(0, 50) + '...');
-    session.messages.push({ role: 'assistant', content: answer, timestamp: new Date() });
-    if (session.messages.length > 32) session.messages = session.messages.slice(-32);
+    // 4. Call Python RAG with history
+    const pythonUrl =
+      process.env.PYTHON_RAG_URL || "http://localhost:8000/query-rag";
+    const resp = await axios.post(
+      pythonUrl,
+      { userId: uid, query: message, emotion, history },
+      { timeout: 1000 * 60 },
+    );
+    const data = resp && resp.data ? resp.data : {};
+    const answer = data.answer || "";
+    const sources = Array.isArray(data.sources) ? data.sources : [];
+    const confidence =
+      typeof data.confidence === "number" ? data.confidence : null;
+
+    // 5. Store assistant message
+    session.messages.push({
+      role: "assistant",
+      content: answer,
+      timestamp: new Date(),
+    });
+    if (session.messages.length > 32)
+      session.messages = session.messages.slice(-32);
     await session.save();
     console.log('[QUERY] Assistant message saved. Total messages:', session.messages.length);
     console.log('[QUERY] Returning sessionId in response:', session.sessionId);
 
-    return res.json({ answer, sources, emotion, confidence, sessionId: session.sessionId });
+    return res.json({
+      answer,
+      sources,
+      emotion,
+      confidence,
+      sessionId: session.sessionId,
+    });
   } catch (err) {
-    console.error('query.ask error for user', uid, err && err.message ? err.message : err);
-    const status = err && err.response && err.response.status ? err.response.status : 500;
-    const messageErr = err && err.response && err.response.data ? err.response.data : 'failed_to_query_rag';
+    console.error(
+      "query.ask error for user",
+      uid,
+      err && err.message ? err.message : err,
+    );
+    const status =
+      err && err.response && err.response.status ? err.response.status : 500;
+    const messageErr =
+      err && err.response && err.response.data
+        ? err.response.data
+        : "failed_to_query_rag";
+    return res.status(status).json({ error: messageErr });
+  }
+});
+
+// POST /api/query/text-emotion
+router.post("/text-emotion", async (req, res) => {
+  const uid = req.user && req.user.uid;
+  if (!uid) return res.status(401).json({ error: "unauthorized" });
+
+  const { query } = req.body || {};
+  if (!query || typeof query !== "string")
+    return res.status(400).json({ error: "query required" });
+
+  try {
+    const pythonUrl =
+      process.env.PYTHON_TEXT_EMOTION_URL ||
+      "http://localhost:8000/text-emotion";
+
+    console.log(`[text-emotion] Calling Python service: ${pythonUrl}`);
+    console.log(`[text-emotion] Query: "${query.substring(0, 50)}..."`);
+
+    const resp = await axios.post(
+      pythonUrl,
+      { userId: uid, query },
+      { timeout: 10000 },
+    );
+    const data = resp && resp.data ? resp.data : {};
+
+    console.log(
+      `[text-emotion] Python response: emotion=${data.emotion}, confidence=${data.confidence}`,
+    );
+
+    return res.json({
+      emotion: data.emotion || "neutral",
+      confidence: data.confidence || 0,
+      raw_label: data.raw_label || "",
+      all_scores: data.all_scores || {},
+    });
+  } catch (err) {
+    console.error(
+      `[text-emotion] Error for user ${uid}:`,
+      err && err.message ? err.message : err,
+    );
+    if (err.code === "ECONNREFUSED") {
+      console.error(
+        "[text-emotion] CRITICAL: Cannot connect to Python service at port 8000. Is it running?",
+      );
+    }
+    if (err.code === "ETIMEDOUT") {
+      console.error(
+        "[text-emotion] CRITICAL: Python service timeout. Response took too long.",
+      );
+    }
+    const status =
+      err && err.response && err.response.status ? err.response.status : 500;
+    const messageErr =
+      err && err.response && err.response.data
+        ? err.response.data
+        : `Python service error: ${err.message || "unknown"}`;
     return res.status(status).json({ error: messageErr });
   }
 });
 
 // POST /api/query/voice
-const multer = require('multer');
+const multer = require("multer");
 const upload = multer();
 
-router.post('/voice', upload.single('file'), async (req, res) => {
+router.post("/voice", upload.single("file"), async (req, res) => {
   const uid = req.user && req.user.uid;
-  if (!uid) return res.status(401).json({ error: 'unauthorized' });
+  if (!uid) return res.status(401).json({ error: "unauthorized" });
 
-  if (!req.file || !req.file.buffer) return res.status(400).json({ error: 'audio file required' });
+  if (!req.file || !req.file.buffer)
+    return res.status(400).json({ error: "audio file required" });
 
   try {
     // Send audio buffer to Python ML service
-    const pythonUrl = process.env.PYTHON_VOICE_URL || 'http://localhost:8000/voice-to-text-emotion';
+    const pythonUrl =
+      process.env.PYTHON_VOICE_URL ||
+      "http://localhost:8000/voice-to-text-emotion";
     const formData = {
       file: {
         value: req.file.buffer,
         options: {
-          filename: req.file.originalname || 'voice-query.webm',
-          contentType: req.file.mimetype || 'audio/webm'
-        }
-      }
+          filename: req.file.originalname || "voice-query.webm",
+          contentType: req.file.mimetype || "audio/webm",
+        },
+      },
     };
     // Use axios for multipart upload
-    const axiosFormData = require('form-data');
+    const axiosFormData = require("form-data");
     const form = new axiosFormData();
-    form.append('file', req.file.buffer, {
-      filename: req.file.originalname || 'voice-query.webm',
-      contentType: req.file.mimetype || 'audio/webm'
+    form.append("file", req.file.buffer, {
+      filename: req.file.originalname || "voice-query.webm",
+      contentType: req.file.mimetype || "audio/webm",
     });
     const resp = await axios.post(pythonUrl, form, {
       headers: form.getHeaders(),
       maxContentLength: Infinity,
-      maxBodyLength: Infinity
+      maxBodyLength: Infinity,
     });
     const data = resp && resp.data ? resp.data : {};
     // Get transcribed text from Python service
-    const transcribedText = data.text || '';
+    const transcribedText = data.text || "";
     let answer = transcribedText;
-    let emotion = data.emotion || 'neutral';
+    let emotion = data.emotion || "neutral";
     let sources = [];
     // If you want to run RAG, call Python RAG endpoint here
     if (transcribedText) {
       try {
-        const ragUrl = process.env.PYTHON_RAG_URL || 'http://localhost:8000/query-rag';
-        const ragResp = await axios.post(ragUrl, { userId: uid, query: transcribedText, emotion });
+        const ragUrl =
+          process.env.PYTHON_RAG_URL || "http://localhost:8000/query-rag";
+        const ragResp = await axios.post(ragUrl, {
+          userId: uid,
+          query: transcribedText,
+          emotion,
+        });
         if (ragResp && ragResp.data) {
           answer = ragResp.data.answer || transcribedText;
           sources = ragResp.data.sources || [];
@@ -341,28 +448,36 @@ router.post('/voice', upload.single('file'), async (req, res) => {
     }
     return res.json({ text: transcribedText, answer, emotion, sources });
   } catch (err) {
-    console.error('query.voice error for user', uid, err && err.message ? err.message : err);
-    const status = err && err.response && err.response.status ? err.response.status : 500;
-    const messageErr = err && err.response && err.response.data ? err.response.data : 'failed_to_voice_query';
+    console.error(
+      "query.voice error for user",
+      uid,
+      err && err.message ? err.message : err,
+    );
+    const status =
+      err && err.response && err.response.status ? err.response.status : 500;
+    const messageErr =
+      err && err.response && err.response.data
+        ? err.response.data
+        : "failed_to_voice_query";
     return res.status(status).json({ error: messageErr });
   }
 });
 
 // GET /api/session/:sessionId
-router.get('/session/:sessionId', async (req, res) => {
+router.get("/session/:sessionId", async (req, res) => {
   const uid = req.user && req.user.uid;
 
-  if (!uid) return res.status(401).json({ error: 'unauthorized' });
+  if (!uid) return res.status(401).json({ error: "unauthorized" });
   const { sessionId } = req.params;
 
-  if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+  if (!sessionId) return res.status(400).json({ error: "sessionId required" });
   try {
     const session = await Session.findOne({ sessionId, userId: uid });
-    if (!session) return res.status(404).json({ error: 'session_not_found' });
+    if (!session) return res.status(404).json({ error: "session_not_found" });
     return res.json({ sessionId, messages: session.messages });
   } catch (err) {
-    console.error('fetch session error', err);
-    return res.status(500).json({ error: 'failed_to_fetch_session' });
+    console.error("fetch session error", err);
+    return res.status(500).json({ error: "failed_to_fetch_session" });
   }
 });
 
