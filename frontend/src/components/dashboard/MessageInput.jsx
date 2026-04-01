@@ -4,9 +4,15 @@ import './dashboard.css';
 export default function MessageInput({onSend, onStartVoice, onStopVoice, isRecording, recordingTime, voiceOutput, setVoiceOutput, isProcessingVoice}){
   const [text, setText] = useState('');
   const submit = ()=>{ if(text.trim()==='') return; onSend(text); setText(''); }
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
+  };
   return (
     <div className="input-area">
-      <textarea className="textbox" value={text} onChange={(e)=>setText(e.target.value)} placeholder="Ask something about your documents..." disabled={isRecording || isProcessingVoice}/>
+      <textarea className="textbox" value={text} onChange={(e)=>setText(e.target.value)} onKeyDown={handleKeyDown} placeholder="Ask something about your documents..." disabled={isRecording || isProcessingVoice}/>
       <button className="icon-btn" title={isRecording ? "Stop Recording" : "Voice"} onClick={isRecording ? onStopVoice : onStartVoice} style={isRecording ? {background:'#f87171',color:'#fff',boxShadow:'0 0 8px #ef4444'} : {}}>
         {isRecording ? (
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" fill="#fff" stroke="#ef4444" strokeWidth="2"/></svg>
