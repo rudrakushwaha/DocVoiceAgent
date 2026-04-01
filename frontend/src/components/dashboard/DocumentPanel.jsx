@@ -23,14 +23,14 @@ export default function DocumentPanel({documents, onUpload, onDelete, processing
       {processing && <div className="processing">Processing & generating embeddings…</div>}
 
       <div className="doc-list">
-        {documents.length===0 && <div style={{padding:12,color:'var(--muted)'}}>No documents yet. Upload to get started.</div>}
+        {documents.length===0 && <div style={{padding:12,color:'var(--text-muted)'}}>No documents yet. Upload to get started.</div>}
         {documents.map(doc=> (
           <div key={doc.id} className="doc-item">
             <div className="meta">
               <div className="doc-icon">📄</div>
               <div>
                 <div className="doc-name">{doc.name}</div>
-                <div style={{fontSize:12,color:'var(--muted)'}}>{doc.size ? `${Math.round(doc.size/1024)} KB` : ''}</div>
+                <div style={{fontSize:12,color:'var(--text-muted)'}}>{doc.size ? `${Math.round(doc.size/1024)} KB` : ''}</div>
               </div>
             </div>
             <div className="doc-actions">
