@@ -7,7 +7,9 @@ const EMOJI = {
   frustrated: '😠',
   confused: '🤔',
   surprised: '😮',
-  sad: '😢'
+  sad: '😢',
+  angry: '😡',
+  panic: '😱'
 }
 
 export default function EmotionIndicator({emotion}){
