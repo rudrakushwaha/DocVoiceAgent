@@ -19,7 +19,10 @@ EMOTION_MAPPING = {
     "joy": "happy",
     "happiness": "happy",
     
-    "anger": "frustrated",
+    "anger": "angry",
+    "angry": "angry",
+    "furious": "angry",
+    "enraged": "angry",
     "frustrated": "frustrated",
     "annoyance": "frustrated",
     
@@ -34,6 +37,11 @@ EMOTION_MAPPING = {
     "contempt": "frustrated",
     
     "surprise": "neutral",  # Neutral emotional stance on surprise
+    
+    # Panic emotions (not in original model but handled via keywords)
+    "panic": "panic",
+    "panicking": "panic",
+    "panicked": "panic",
     
     # Default
     "neutral": "neutral",
@@ -63,6 +71,17 @@ KEYWORD_EMOTIONS = {
         "this is confusing", "this is very confusing", "i'm lost", "what do you mean", 
         "i don't get it", "doesnt make sense", "not clear", "i'm confused about",
         "can't figure out", "cant figure out", "not sure what to do"
+    ],
+    "angry": [
+        "i am angry", "so angry", "very angry", "really angry",
+        "this makes me angry", "getting angry", "makes me angry",
+        "i'm angry", "im angry", "pissed off", "furious", "enraged",
+        "this is outrageous", "i can't believe this", "unbelievable"
+    ],
+    "panic": [
+        "i'm panicking", "i am panicking", "having a panic attack",
+        "so panicked", "really panicking", "start to panic",
+        "in a panic", "panic mode", "freaking out", "losing my mind"
     ]
 }
 
