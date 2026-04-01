@@ -13,13 +13,10 @@
     "express": "^4.18.2",
     "firebase-admin": "^11.5.0",
     "multer": "^2.0.2",
-<<<<<<< HEAD
     "mongoose": "^7.0.0",
-    "axios": "^1.3.0"
-=======
+    "axios": "^1.3.0",
     "openai": "^6.32.0",
     "pdfkit": "^0.18.0"
->>>>>>> 1606054 (agentic feature)
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

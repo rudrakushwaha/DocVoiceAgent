@@ -106,66 +106,6 @@ export async function getAIResponse(message, emotion, sessionId) {
   }
 }
 
-<<<<<<< HEAD
-=======
-*/
-
-export async function getAIResponse(message, emotion, sessionId) {
-  const user = auth.currentUser;
-
-  if (!user) {
-    throw new Error("User not authenticated");
-  }
-
-  const token = await user.getIdToken();
-
-  const payload = { message };
-  if (emotion) payload.emotion = emotion;
-  // Always pass sessionId (should always exist now)
-  if (sessionId) payload.sessionId = sessionId;
-
-  const apiUrl =
-    import.meta.env.VITE_API_URL || "http://localhost:4000/api/query/ask"; // ⚠️ verify this matches backend
-
-  console.log("➡️ Sending request to:", apiUrl);
-  console.log("➡️ Payload:", payload);
-
-  const resp = await fetch(apiUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  // 🔥 HARD FAIL (NO MOCK FALLBACK)
-  if (!resp.ok) {
-    let err;
-    try {
-      err = await resp.json();
-    } catch {
-      err = await resp.text();
-    }
-
-    console.error("❌ API ERROR:", err);
-    throw new Error("Backend API failed");
-  }
-
-  const data = await resp.json();
-
-  console.log("✅ BACKEND RESPONSE:", data);
-
-  return {
-    text: data.answer || "",
-    emotion: data.emotion || "neutral",
-    sources: data.sources || [],
-    confidence: data.confidence || null,
-    sessionId: data.sessionId || sessionId || null,
-  };
-}
-
->>>>>>> 1606054 (agentic feature)
 // startVoiceRecording now returns { start, stop, isRecording, promise }
 export function startVoiceRecording(maxDurationSec = 30) {
   let mediaRecorder = null;

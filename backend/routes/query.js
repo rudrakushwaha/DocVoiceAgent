@@ -269,14 +269,6 @@ Your complete chat history has been exported and is ready for download!`;
       }
     }
 
-    // 5. Call Python RAG with history
-    const pythonUrl = process.env.PYTHON_RAG_URL || 'http://localhost:8000/query-rag';
-    const resp = await axios.post(pythonUrl, { userId: uid, query: message, emotion, history }, { timeout: 1000 * 60 });
-    // 3. Prepare last 8 messages for context window
-    const history = session.messages
-      .slice(-8)
-      .map((m) => ({ role: m.role, content: m.content }));
-
     // 4. Call Python RAG with history
     const pythonUrl =
       process.env.PYTHON_RAG_URL || "http://localhost:8000/query-rag";
@@ -295,6 +287,8 @@ Your complete chat history has been exported and is ready for download!`;
     session.messages.push({
       role: "assistant",
       content: answer,
+      emotion,
+      sources,
       timestamp: new Date(),
     });
     if (session.messages.length > 32)

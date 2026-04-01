@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const MessageSchema = new mongoose.Schema({
   role: { type: String, enum: ['user', 'assistant'], required: true },
   content: { type: String, required: true },
+  emotion: { type: String, default: null },
+  sources: { type: [mongoose.Schema.Types.Mixed], default: [] },
   timestamp: { type: Date, default: Date.now }
 }, { _id: false });
 

@@ -4,6 +4,7 @@ import TopBar from './TopBar';
 import DocumentPanel from './DocumentPanel';
 import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
+import PDFDownloadModal from './PDFDownloadModal';
 import { getAIResponse, detectTextEmotion, handleSpeak } from './utils';
 import { auth } from '../../firebase/firebase';
 
@@ -152,7 +153,12 @@ export default function Dashboard() {
         if (!ignore && Array.isArray(data.messages)) {
           const mapped = data.messages
             .filter(m => m.role === 'user' || m.role === 'assistant')
-            .map(m => ({ role: m.role === 'assistant' ? 'ai' : 'user', text: m.content }));
+            .map(m => ({ 
+              role: m.role === 'assistant' ? 'ai' : 'user', 
+              text: m.content,
+              emotion: m.emotion || null,
+              sources: m.sources || []
+            }));
           console.log('[Rehydrate] Setting messages:', mapped);
           setMessages(mapped);
         } else {
